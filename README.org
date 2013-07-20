@@ -1,0 +1,10 @@
+# -*- mode:org; mode:auto-fill; fill-column:80; coding:utf-8; -*-
+* magit-filenotify --- Refresh status buffer if git tree changes
+This module for [[http://magit.github.io/magit/][magit]] provides an auto update mode for the status buffer.  It
+uses the file notification support of Emacs 24.4.  Emacs 24.4 is not yet
+released so a snapshot with =file-notify= support is required.
+
+This is an updated version of the obsolete =contrib/magit-inotify.el= mode.
+
+Activate the mode inside the =magit-status= buffer by calling
+=M-x magit-filenotify-mode [RET]=.  Repeat the same step to deactivate it again.
