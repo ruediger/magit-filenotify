@@ -70,8 +70,6 @@ Argument EV contains the watch data."
 (defun magit-filenotify-start ()
   "Start watching for changes to the source tree using filenotify.
 This can only be called from a magit status buffer."
-  (unless file-notify-support ;; TODO replace with file-notify-supported-p
-    (error "Support for `file-notify' required."))
   (unless (derived-mode-p 'magit-status-mode)
     (error "Only works in magit status buffer"))
   (dolist (dir (magit-filenotify--directories))
