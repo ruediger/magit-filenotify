@@ -47,8 +47,7 @@
    default-directory
    (cl-remove-duplicates
     (cl-loop for file in (magit-git-lines "ls-files")
-             with tmp
-             do (setq tmp (file-name-directory file))
+             for tmp = (file-name-directory file)
              when tmp
              collect (expand-file-name tmp))
     :test #'string=)))
