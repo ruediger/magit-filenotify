@@ -135,6 +135,7 @@ This can only be called from a magit status buffer."
 
 (defun magit-filenotify-unload-function ()
   "Cleanup when module is unloaded."
+  (magit-filenotify-stop-all)
   (easy-menu-remove-item magit-mode-menu nil "Auto Refresh"))
 
 (provide 'magit-filenotify)
