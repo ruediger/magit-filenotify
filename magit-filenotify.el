@@ -55,17 +55,26 @@
 (defvar magit-filenotify-data (make-hash-table)
   "A hash table to map watch-descriptors to a list (DIRECTORY STATUS-BUFFER).")
 
+(defvar magit-filenotify-ignored '("\\`\\.#"
+                                   "\\`flycheck_")
+  "A list of regexp for filenames that will be ignored by the callback.")
+
 (defun magit-filenotify--callback (ev)
   "Handle file-notify callbacks.
 Argument EV contains the watch data."
-  (let* ((wd (car ev))
-         (data (gethash wd magit-filenotify-data))
-         (buffer (cadr data)))
-    (if (buffer-live-p buffer)
-        (with-current-buffer buffer
-          (magit-refresh))
-      (file-notify-rm-watch wd)
-      (remhash wd magit-filenotify-data))))
+  (unless
+      (let ((file (car (last ev))) res)
+        (dolist (rx magit-filenotify-ignored res)
+          (when (string-match rx (file-name-nondirectory file))
+            (setq res t))))
+    (let* ((wd (car ev))
+           (data (gethash wd magit-filenotify-data))
+           (buffer (cadr data)))
+      (if (buffer-live-p buffer)
+          (with-current-buffer buffer
+            (magit-refresh))
+        (file-notify-rm-watch wd)
+        (remhash wd magit-filenotify-data)))))
 
 (defun magit-filenotify-start ()
   "Start watching for changes to the source tree using filenotify.
