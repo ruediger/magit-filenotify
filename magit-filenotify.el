@@ -40,6 +40,12 @@
   :prefix "magit-filenotify"
   :group 'magit)
 
+(defcustom magit-filenotify-ignored '("\\`\\.#"
+                                   "\\`flycheck_")
+  "A list of regexp for filenames that will be ignored by the callback."
+  :group 'magit-filenotify
+  :type '(repeat regexp))
+
 (defun magit-filenotify--directories ()
   "List all directories containing files watched by git."
   ;; TODO: add .git directory?
@@ -58,14 +64,19 @@
 (defun magit-filenotify--callback (ev)
   "Handle file-notify callbacks.
 Argument EV contains the watch data."
-  (let* ((wd (car ev))
-         (data (gethash wd magit-filenotify-data))
-         (buffer (cadr data)))
-    (if (buffer-live-p buffer)
-        (with-current-buffer buffer
-          (magit-refresh))
-      (file-notify-rm-watch wd)
-      (remhash wd magit-filenotify-data))))
+  (unless
+      (let ((file (car (last ev))) res)
+        (dolist (rx magit-filenotify-ignored res)
+          (when (string-match rx (file-name-nondirectory file))
+            (setq res t))))
+    (let* ((wd (car ev))
+           (data (gethash wd magit-filenotify-data))
+           (buffer (cadr data)))
+      (if (buffer-live-p buffer)
+          (with-current-buffer buffer
+            (magit-refresh))
+        (file-notify-rm-watch wd)
+        (remhash wd magit-filenotify-data)))))
 
 (defun magit-filenotify-start ()
   "Start watching for changes to the source tree using filenotify.
