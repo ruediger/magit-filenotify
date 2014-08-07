@@ -144,6 +144,8 @@ This can only be called from a magit status buffer."
                      :help "Refresh magit status buffer when source tree updates"]
                     "Refresh")
 
+(custom-add-option 'magit-status-mode-hook #'magit-filenotify-mode)
+
 (defun magit-filenotify-unload-function ()
   "Cleanup when module is unloaded."
   (magit-filenotify-stop-all)
