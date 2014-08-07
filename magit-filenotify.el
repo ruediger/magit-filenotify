@@ -38,7 +38,7 @@
 (defgroup magit-filenotify nil
   "Refresh status buffer if source tree changes"
   :prefix "magit-filenotify"
-  :group 'magit)
+  :group 'magit-extensions)
 
 (defcustom magit-filenotify-ignored '("\\`\\.#"
                                    "\\`flycheck_")
