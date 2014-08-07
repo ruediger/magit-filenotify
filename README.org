@@ -8,3 +8,6 @@ This is an updated version of the obsolete =contrib/magit-inotify.el= mode.
 
 Activate the mode inside the =magit-status= buffer by calling
 =M-x magit-filenotify-mode [RET]=.  Repeat the same step to deactivate it again.
+
+To always enable the mode when opening the =magit-status= buffer add
+=magit-filenotify-mode= to the =magit-status-mode-hook=.
