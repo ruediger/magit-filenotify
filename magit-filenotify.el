@@ -40,8 +40,7 @@
   :prefix "magit-filenotify"
   :group 'magit-extensions)
 
-(defcustom magit-filenotify-ignored '("\\`\\.#"
-                                   "\\`flycheck_")
+(defcustom magit-filenotify-ignored '("\\`\\.#" "\\`flycheck_")
   "A list of regexp for filenames that will be ignored by the callback."
   :group 'magit-filenotify
   :type '(repeat regexp))
@@ -85,8 +84,8 @@ This can only be called from a magit status buffer."
     (error "Only works in magit status buffer"))
   (dolist (dir (magit-filenotify--directories))
     (puthash (file-notify-add-watch dir
-                                '(change attribute-change)
-                                #'magit-filenotify--callback)
+                                    '(change attribute-change)
+                                    #'magit-filenotify--callback)
              (list dir (current-buffer))
              magit-filenotify-data)))
 
