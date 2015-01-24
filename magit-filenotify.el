@@ -52,9 +52,9 @@
    default-directory
    (cl-remove-duplicates
     (cl-loop for file in (magit-git-lines "ls-files")
-             for tmp = (file-name-directory file)
-             when tmp
-             collect (expand-file-name tmp))
+             for dir = (file-name-directory (magit-decode-git-paths file))
+             when dir
+             collect (expand-file-name dir))
     :test #'string=)))
 
 (defvar magit-filenotify-data (make-hash-table)
