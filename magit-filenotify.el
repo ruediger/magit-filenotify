@@ -47,7 +47,6 @@
 
 (defun magit-filenotify--directories ()
   "List all directories containing files watched by git."
-  ;; TODO: add .git directory?
   (cons
    default-directory
    (cl-remove-duplicates
