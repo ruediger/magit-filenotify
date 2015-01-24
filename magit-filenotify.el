@@ -82,11 +82,12 @@ This can only be called from a magit status buffer."
   (unless (derived-mode-p 'magit-status-mode)
     (error "Only works in magit status buffer"))
   (dolist (dir (magit-filenotify--directories))
-    (puthash (file-notify-add-watch dir
-                                    '(change attribute-change)
-                                    #'magit-filenotify--callback)
-             (list dir (current-buffer))
-             magit-filenotify-data)))
+    (when (file-exists-p dir)
+      (puthash (file-notify-add-watch dir
+                                      '(change attribute-change)
+                                      #'magit-filenotify--callback)
+               (list dir (current-buffer))
+               magit-filenotify-data))))
 
 (defun magit-filenotify-stop ()
   "Stop watching for changes to the source tree using filenotify.
