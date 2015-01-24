@@ -150,5 +150,7 @@ This can only be called from a magit status buffer."
   (easy-menu-remove-item magit-mode-menu nil "Auto Refresh"))
 
 (provide 'magit-filenotify)
-
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
 ;;; magit-filenotify.el ends here
