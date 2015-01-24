@@ -47,14 +47,13 @@
 
 (defun magit-filenotify--directories ()
   "List all directories containing files watched by git."
-  ;; TODO: add .git directory?
   (cons
    default-directory
    (cl-remove-duplicates
     (cl-loop for file in (magit-git-lines "ls-files")
-             for tmp = (file-name-directory file)
-             when tmp
-             collect (expand-file-name tmp))
+             for dir = (file-name-directory (magit-decode-git-paths file))
+             when dir
+             collect (expand-file-name dir))
     :test #'string=)))
 
 (defvar magit-filenotify-data (make-hash-table)
@@ -151,5 +150,7 @@ This can only be called from a magit status buffer."
   (easy-menu-remove-item magit-mode-menu nil "Auto Refresh"))
 
 (provide 'magit-filenotify)
-
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
 ;;; magit-filenotify.el ends here
