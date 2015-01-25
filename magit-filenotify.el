@@ -1,6 +1,6 @@
 ;;; magit-filenotify.el --- Refresh status buffer when git tree changes -*- lexical-binding: t -*-
 
-;; Copyright (C) 2013 Rüdiger Sonderfeld
+;; Copyright (C) 2013-2015 Rüdiger Sonderfeld
 
 ;; Author: Rüdiger Sonderfeld <ruediger@c-plusplus.de>
 ;; Created: 17 Jul 2013
