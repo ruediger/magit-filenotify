@@ -5,7 +5,7 @@
 ;; Author: Rüdiger Sonderfeld <ruediger@c-plusplus.de>
 ;; Created: 17 Jul 2013
 ;; Keywords: tools
-;; Package-Requires: ((magit "1.3.0") (emacs "24.4"))
+;; Package-Requires: ((magit "1.3.0") (emacs "24.4") (cl-lib "0.5"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -56,8 +56,45 @@
              collect (expand-file-name dir))
     :test #'string=)))
 
-(defvar magit-filenotify-data (make-hash-table)
+;; Use #'equal as test because watch-descriptors aren't always integers.  With
+;; inotify, descriptors can be lists like (17).
+(defvar magit-filenotify-data (make-hash-table :test #'equal)
   "A hash table to map watch-descriptors to a list (DIRECTORY STATUS-BUFFER).")
+
+(defvar magit-filenotify--idle-timer nil
+  "Timer which will refresh buffers when emacs becomes idle.")
+
+(defvar magit-filenotify-idle-delay 1.57
+  "Number of seconds to wait before refreshing.")
+
+(defvar magit-filenotify--buffers nil
+  "List of magit status buffers to be refreshed.
+Those will be refreshed after `magit-filenotify-idle-delay' seconds.")
+
+(defun magit-filenotify--refresh ()
+  (dolist (b magit-filenotify--buffers)
+    (when (buffer-live-p b)
+      (with-current-buffer b
+        ;; `magit-refresh' runs the functions in `magit-pre-refresh-hook' which
+        ;; contains `magit-maybe-save-repository-buffers'.  This function
+        ;; queries the user to save repository buffers.  That's nice for
+        ;; interactive use but it's bad here because when you edit, save, and
+        ;; start editing again, you'll get that query after
+        ;; `magit-filenotify-idle-delay'.
+        (defvar magit-pre-refresh-hook) ; Workaround Emacs bug#21311.
+        (let ((magit-pre-refresh-hook nil))
+          (magit-refresh)))))
+  (setq magit-filenotify--buffers nil))
+
+(defun magit-filenotify--register-buffer (buffer)
+  (cl-pushnew buffer magit-filenotify--buffers)
+  (if magit-filenotify--idle-timer
+      (progn
+        (cancel-timer magit-filenotify--idle-timer)
+        (timer-activate-when-idle magit-filenotify--idle-timer t))
+    (setq magit-filenotify--idle-timer
+          (run-with-idle-timer magit-filenotify-idle-delay
+                               nil #'magit-filenotify--refresh))))
 
 (defun magit-filenotify--callback (ev)
   "Handle file-notify callbacks.
@@ -71,8 +108,7 @@ Argument EV contains the watch data."
            (data (gethash wd magit-filenotify-data))
            (buffer (cadr data)))
       (if (buffer-live-p buffer)
-          (with-current-buffer buffer
-            (magit-refresh))
+          (magit-filenotify--register-buffer buffer)
         (file-notify-rm-watch wd)
         (remhash wd magit-filenotify-data)))))
 
@@ -96,7 +132,10 @@ This can only be called from a magit status buffer."
     (error "Only works in magit status buffer"))
   (maphash
    (lambda (k v)
-     (when (equal (cadr v) (current-buffer)) ; or use buffer?
+     (when (or (equal (cadr v) (current-buffer)) ; or use buffer?
+               ;; Also remove watches for source trees where the magit status
+               ;; buffer has been killed.
+               (not (buffer-live-p (cadr v))))
        (file-notify-rm-watch k)
        (remhash k magit-filenotify-data)))
    magit-filenotify-data))
@@ -124,7 +163,9 @@ This can only be called from a magit status buffer."
   :lighter magit-filenotify-lighter
   :group 'magit-filenotify
   (if magit-filenotify-mode
-      (magit-filenotify-start)
+      (progn
+        (magit-filenotify-start)
+        (add-hook 'kill-buffer-hook #'magit-filenotify-stop nil t))
     (magit-filenotify-stop)))
 
 (defun magit-filenotify-stop-all ()
