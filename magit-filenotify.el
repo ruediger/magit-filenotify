@@ -66,8 +66,10 @@
 (defvar magit-filenotify--idle-timer nil
   "Timer which will refresh buffers when emacs becomes idle.")
 
-(defvar magit-filenotify-idle-delay 1.57
-  "Number of seconds to wait before refreshing.")
+(defcustom magit-filenotify-idle-delay 1.57
+  "Number of seconds to wait before refreshing out-of-date buffers."
+  :group 'magit-filenotify
+  :type 'number)
 
 (defvar magit-filenotify--buffers nil
   "List of magit status buffers to be refreshed.
