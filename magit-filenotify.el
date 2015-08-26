@@ -57,7 +57,9 @@
     :test #'string=)))
 
 ;; Use #'equal as test because watch-descriptors aren't always integers.  With
-;; inotify, descriptors can be lists like (17).
+;; inotify, descriptors can be lists like (17).  This is properly documented in
+;; (info "(elisp)File Notifications") which states "It [the descriptor] should
+;; be used for comparison by `equal' only".
 (defvar magit-filenotify-data (make-hash-table :test #'equal)
   "A hash table to map watch-descriptors to a list (DIRECTORY STATUS-BUFFER).")
 
@@ -72,6 +74,9 @@
 Those will be refreshed after `magit-filenotify-idle-delay' seconds.")
 
 (defun magit-filenotify--refresh ()
+  "Refresh all magit status buffers in `magit-filenotify--buffers'.
+Those are all status buffers for which file change notifications
+have been received since the last refresh."
   (dolist (b magit-filenotify--buffers)
     (when (buffer-live-p b)
       (with-current-buffer b
@@ -81,12 +86,27 @@ Those will be refreshed after `magit-filenotify-idle-delay' seconds.")
         ;; interactive use but it's bad here because when you edit, save, and
         ;; start editing again, you'll get that query after
         ;; `magit-filenotify-idle-delay'.
-        (defvar magit-pre-refresh-hook) ; Workaround Emacs bug#21311.
+        ;;
+        ;; Workaround Emacs bug#21311.  As the bug states, this is actually not
+        ;; an Emacs bug but a bug in Magit.  All hooks should be declared using
+        ;; `defvar' nowadays.  This has been fixed already in Magit (see
+        ;; https://github.com/magit/magit/issues/2198) but let's keep that here
+        ;; for compatibility with older Magit versions.
+        (defvar magit-pre-refresh-hook)
         (let ((magit-pre-refresh-hook nil))
           (magit-refresh)))))
   (setq magit-filenotify--buffers nil))
 
 (defun magit-filenotify--register-buffer (buffer)
+  "Register BUFFER as being out-of-date.
+BUFFER is some magit status buffer where some file-notify change
+event has been received for some of the repository's
+directories.
+
+All out-of-date magit status buffers are collected in
+`magit-filenotify--buffers' and will be refreshed automatically
+when Emacs has been idle for `magit-filenotify-idle-delay'
+seconds."
   (cl-pushnew buffer magit-filenotify--buffers)
   (if magit-filenotify--idle-timer
       (progn
