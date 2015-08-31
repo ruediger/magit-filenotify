@@ -5,7 +5,7 @@
 ;; Author: Rüdiger Sonderfeld <ruediger@c-plusplus.de>
 ;; Created: 17 Jul 2013
 ;; Keywords: tools
-;; Package-Requires: ((magit "1.3.0") (emacs "24.4") (cl-lib "0.5"))
+;; Package-Requires: ((magit "1.3.0") (emacs "24.4"))
 
 ;; This file is NOT part of GNU Emacs.
 
