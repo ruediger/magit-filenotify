@@ -238,6 +238,7 @@ This can only be called from a magit status buffer."
 (easy-menu-add-item magit-mode-menu nil
                     ["Auto Refresh" magit-filenotify-mode
                      :style toggle
+                     :visible (derived-mode-p 'magit-status-mode)
                      :selected (magit-filenotify-watching-p)
                      :help "Refresh magit status buffer when source tree updates"]
                     "Refresh")
