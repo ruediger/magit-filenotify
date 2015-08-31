@@ -71,33 +71,50 @@
   :group 'magit-filenotify
   :type 'number)
 
+(defcustom magit-filenotify-instant-refresh-time 1.73
+  "Minimum number of seconds for an instant refresh.
+When an file-notify event occurs for some repository and the
+previous event is more distant than this value, the corresponding
+magit status buffer will be refreshed immediately instead of
+delaying the refresh according to `magit-filenotify-idle-delay'.
+
+Note that setting this option to a too low value will cause very
+frequent refreshes which might seem to make emacs hang in case
+frequent changes occur to files, e.g., during the compilation of
+a large project."
+  :group 'magit-filenotify
+  :type 'number)
+
 (defvar magit-filenotify--buffers nil
   "List of magit status buffers to be refreshed.
 Those will be refreshed after `magit-filenotify-idle-delay' seconds.")
 
-(defun magit-filenotify--refresh ()
+(defun magit-filenotify--refresh-buffer (buffer)
+  "Refresh the given magit status BUFFER."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      ;; `magit-refresh' runs the functions in `magit-pre-refresh-hook' which
+      ;; contains `magit-maybe-save-repository-buffers'.  This function
+      ;; queries the user to save repository buffers.  That's nice for
+      ;; interactive use but it's bad here because when you edit, save, and
+      ;; start editing again, you'll get that query after
+      ;; `magit-filenotify-idle-delay'.
+      ;;
+      ;; Workaround Emacs bug#21311.  As the bug states, this is actually not
+      ;; an Emacs bug but a bug in Magit.  All hooks should be declared using
+      ;; `defvar' nowadays.  This has been fixed already in Magit (see
+      ;; https://github.com/magit/magit/issues/2198) but let's keep that here
+      ;; for compatibility with older Magit versions.
+      (defvar magit-pre-refresh-hook)
+      (let ((magit-pre-refresh-hook nil))
+        (magit-refresh))))
+  (setq magit-filenotify--buffers (delq buffer magit-filenotify--buffers)))
+
+(defun magit-filenotify--refresh-all ()
   "Refresh all magit status buffers in `magit-filenotify--buffers'.
 Those are all status buffers for which file change notifications
 have been received since the last refresh."
-  (dolist (b magit-filenotify--buffers)
-    (when (buffer-live-p b)
-      (with-current-buffer b
-        ;; `magit-refresh' runs the functions in `magit-pre-refresh-hook' which
-        ;; contains `magit-maybe-save-repository-buffers'.  This function
-        ;; queries the user to save repository buffers.  That's nice for
-        ;; interactive use but it's bad here because when you edit, save, and
-        ;; start editing again, you'll get that query after
-        ;; `magit-filenotify-idle-delay'.
-        ;;
-        ;; Workaround Emacs bug#21311.  As the bug states, this is actually not
-        ;; an Emacs bug but a bug in Magit.  All hooks should be declared using
-        ;; `defvar' nowadays.  This has been fixed already in Magit (see
-        ;; https://github.com/magit/magit/issues/2198) but let's keep that here
-        ;; for compatibility with older Magit versions.
-        (defvar magit-pre-refresh-hook)
-        (let ((magit-pre-refresh-hook nil))
-          (magit-refresh)))))
-  (setq magit-filenotify--buffers nil))
+  (mapc #'magit-filenotify--refresh-buffer magit-filenotify--buffers))
 
 (defun magit-filenotify--register-buffer (buffer)
   "Register BUFFER as being out-of-date.
@@ -116,7 +133,10 @@ seconds."
         (timer-activate-when-idle magit-filenotify--idle-timer t))
     (setq magit-filenotify--idle-timer
           (run-with-idle-timer magit-filenotify-idle-delay
-                               nil #'magit-filenotify--refresh))))
+                               nil #'magit-filenotify--refresh-all))))
+
+(defvar magit-filenotify--last-event-times (make-hash-table)
+  "A hash-table from status buffers to the last event for the buffers.")
 
 (defun magit-filenotify--callback (ev)
   "Handle file-notify callbacks.
@@ -128,11 +148,26 @@ Argument EV contains the watch data."
             (setq res t))))
     (let* ((wd (car ev))
            (data (gethash wd magit-filenotify-data))
-           (buffer (cadr data)))
+           (buffer (cadr data))
+           (now (current-time)))
       (if (buffer-live-p buffer)
-          (magit-filenotify--register-buffer buffer)
+          (let ((last-event-time (gethash buffer magit-filenotify--last-event-times)))
+            (puthash buffer now magit-filenotify--last-event-times)
+            (if (and last-event-time
+                     (> (time-to-seconds (time-subtract now last-event-time))
+                        magit-filenotify-instant-refresh-time))
+                ;; Fast path: The last event concerning this status buffer is
+                ;; quite some time back in the past, so refresh immediately.
+                ;; This should basically catch all cases where a user manually
+                ;; modifies a file, e.g. by saving a buffer.
+                (magit-filenotify--refresh-buffer buffer)
+              ;; Delayed path: We're receiving bursts of events which probably
+              ;; means that some kind of compilation is ongoing.  So defer the
+              ;; refreshes into the future in order not to lock up emacs.
+              (magit-filenotify--register-buffer buffer)))
         (file-notify-rm-watch wd)
-        (remhash wd magit-filenotify-data)))))
+        (remhash wd magit-filenotify-data)
+        (remhash buffer magit-filenotify--last-event-times)))))
 
 (defun magit-filenotify-start ()
   "Start watching for changes to the source tree using filenotify.
@@ -159,7 +194,8 @@ This can only be called from a magit status buffer."
                ;; buffer has been killed.
                (not (buffer-live-p (cadr v))))
        (file-notify-rm-watch k)
-       (remhash k magit-filenotify-data)))
+       (remhash k magit-filenotify-data)
+       (remhash (cadr v) magit-filenotify--last-event-times)))
    magit-filenotify-data))
 
 (defun magit-filenotify-watching-p ()
