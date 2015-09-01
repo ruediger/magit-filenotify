@@ -64,7 +64,7 @@
   "A hash table to map watch-descriptors to a list (DIRECTORY STATUS-BUFFER).")
 
 (defvar magit-filenotify--idle-timer nil
-  "Timer which will refresh buffers when emacs becomes idle.")
+  "Timer which will refresh buffers when Emacs becomes idle.")
 
 (defcustom magit-filenotify-idle-delay 1.57
   "Number of seconds to wait before refreshing out-of-date buffers."
@@ -79,7 +79,7 @@ magit status buffer will be refreshed immediately instead of
 delaying the refresh according to `magit-filenotify-idle-delay'.
 
 Note that setting this option to a too low value will cause very
-frequent refreshes which might seem to make emacs hang in case
+frequent refreshes which might seem to make Emacs hang in case
 frequent changes occur to files, e.g., during the compilation of
 a large project."
   :group 'magit-filenotify
