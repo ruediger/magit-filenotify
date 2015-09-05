@@ -138,6 +138,24 @@ seconds."
 (defvar magit-filenotify--last-event-times (make-hash-table)
   "A hash-table from status buffers to the last event for the buffers.")
 
+(defun magit-filenotify-rm-watch (desc)
+  "Remove the directory watch DESC."
+  ;; At least when using inotify as `file-notify--library' there will be an
+  ;; error when calling `file-notify-rm-watch' on a descriptor of a directory
+  ;; which has been deleted (as per git rm -rf some/dir/).
+  ;;
+  ;; Actually, it would be even better to handle deletions and creations of
+  ;; directories directly in `magit-filenotify--callback', i.e., if a watched
+  ;; dir is deleted, remove its entry (and all subdir entries) from
+  ;; `magit-filenotify-data'.  If some new directory is created as a
+  ;; subdirectory of a watched directory, start watching it.  However, one
+  ;; problem is that renamings can be either reported as one `renamed' events
+  ;; or a sequence of `created' and `deleted' events in any order depending on
+  ;; `file-notify--library' (and maybe also `system-type').
+  (condition-case var
+      (file-notify-rm-watch desc)
+    (file-notify-error (message "File notify error: %S" (cdr var)))))
+
 (defun magit-filenotify--callback (ev)
   "Handle file-notify callbacks.
 Argument EV contains the watch data."
@@ -165,7 +183,7 @@ Argument EV contains the watch data."
               ;; means that some kind of compilation is ongoing.  So defer the
               ;; refreshes into the future in order not to lock up emacs.
               (magit-filenotify--register-buffer buffer)))
-        (file-notify-rm-watch wd)
+        (magit-filenotify-rm-watch wd)
         (remhash wd magit-filenotify-data)
         (remhash buffer magit-filenotify--last-event-times)))))
 
@@ -193,7 +211,7 @@ This can only be called from a magit status buffer."
                ;; Also remove watches for source trees where the magit status
                ;; buffer has been killed.
                (not (buffer-live-p (cadr v))))
-       (file-notify-rm-watch k)
+       (magit-filenotify-rm-watch k)
        (remhash k magit-filenotify-data)
        (remhash (cadr v) magit-filenotify--last-event-times)))
    magit-filenotify-data))
@@ -230,7 +248,7 @@ This can only be called from a magit status buffer."
   "Stop watching for changes in all git trees."
   (interactive)
   (maphash
-   (lambda (k _v) (file-notify-rm-watch k))
+   (lambda (k _v) (magit-filenotify-rm-watch k))
    magit-filenotify-data)
   (clrhash magit-filenotify-data))
 
