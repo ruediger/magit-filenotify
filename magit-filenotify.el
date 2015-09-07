@@ -138,7 +138,7 @@ seconds."
 (defvar magit-filenotify--last-event-times (make-hash-table)
   "A hash-table from status buffers to the last event for the buffers.")
 
-(defun magit-filenotify-rm-watch (desc)
+(defun magit-filenotify--rm-watch (desc)
   "Remove the directory watch DESC."
   ;; At least when using inotify as `file-notify--library' there will be an
   ;; error when calling `file-notify-rm-watch' on a descriptor of a directory
@@ -183,7 +183,7 @@ Argument EV contains the watch data."
               ;; means that some kind of compilation is ongoing.  So defer the
               ;; refreshes into the future in order not to lock up emacs.
               (magit-filenotify--register-buffer buffer)))
-        (magit-filenotify-rm-watch wd)
+        (magit-filenotify--rm-watch wd)
         (remhash wd magit-filenotify-data)
         (remhash buffer magit-filenotify--last-event-times)))))
 
@@ -211,7 +211,7 @@ This can only be called from a magit status buffer."
                ;; Also remove watches for source trees where the magit status
                ;; buffer has been killed.
                (not (buffer-live-p (cadr v))))
-       (magit-filenotify-rm-watch k)
+       (magit-filenotify--rm-watch k)
        (remhash k magit-filenotify-data)
        (remhash (cadr v) magit-filenotify--last-event-times)))
    magit-filenotify-data))
@@ -248,7 +248,7 @@ This can only be called from a magit status buffer."
   "Stop watching for changes in all git trees."
   (interactive)
   (maphash
-   (lambda (k _v) (magit-filenotify-rm-watch k))
+   (lambda (k _v) (magit-filenotify--rm-watch k))
    magit-filenotify-data)
   (clrhash magit-filenotify-data))
 
