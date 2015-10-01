@@ -160,7 +160,7 @@ seconds."
   "Handle file-notify callbacks.
 Argument EV contains the watch data."
   (unless
-      (let ((file (car (last ev))) res)
+      (let ((file (nth 2 ev)) res)
         (dolist (rx magit-filenotify-ignored res)
           (when (string-match rx (file-name-nondirectory file))
             (setq res t))))
