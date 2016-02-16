@@ -241,9 +241,14 @@ This can only be called from a magit status buffer."
   :lighter magit-filenotify-lighter
   :group 'magit-filenotify
   (if magit-filenotify-mode
-      (progn
-        (magit-filenotify-start)
-        (add-hook 'kill-buffer-hook #'magit-filenotify-stop nil t))
+      (condition-case err
+          (progn
+            (magit-filenotify-start)
+            (add-hook 'kill-buffer-hook #'magit-filenotify-stop nil t))
+        ((error quit)
+	 (magit-filenotify-stop)
+         (setq magit-filenotify-mode nil)
+	 (signal (car err) (cdr err))))
     (magit-filenotify-stop)))
 
 (defun magit-filenotify-stop-all ()
